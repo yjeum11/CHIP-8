@@ -57,6 +57,11 @@ int main (int argc, char *argv[]) {
     // Load program
     FILE *prog_f = fopen(argv[1], "rb");
     fread(memory+0x200, 1, 4096, prog_f);
+    fclose(prog_f);
+
+    FILE *out_tty = fopen("/dev/pts/7", "w");
+
+    memory[0x1ff] = 1;
 
     init_screen();
 
@@ -182,12 +187,15 @@ int main (int argc, char *argv[]) {
                 V[0xF] = draw_sprite(display, sprite, V[x], V[y]);
                 break;
             case 0xE:
+                ;
+                int16_t key = get_key();
+                uint8_t c8key = keyboard_to_chip8(key);
                 if (kk == 0x9E) {
-                    if (V[x] == keyboard_to_chip8(get_key())) {
+                    if (V[x] == keyboard_to_chip8(key)) {
                         pc += 2;
                     }
                 } else if (kk == 0xA1) {
-                    if (V[x] != keyboard_to_chip8(get_key())) {
+                    if (V[x] != keyboard_to_chip8(key)) {
                         pc += 2;
                     }
                 }
@@ -198,7 +206,7 @@ int main (int argc, char *argv[]) {
                         V[x] = DT;
                         break;
                     case 0x0A:
-                        V[x] = get_key_block();
+                        V[x] = keyboard_to_chip8(get_key_block());
                         break;
                     case 0x15:
                         DT = V[x];
@@ -251,9 +259,12 @@ int main (int argc, char *argv[]) {
         }
         update_graphics(display);
         if (get_key() == 'p') {
+            fclose(out_tty);
             uninit_screen();
             exit(0);
         }
     }
 
 }
+
+
