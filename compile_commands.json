@@ -1,0 +1,15 @@
+[
+ {
+  "directory": "/home/yjeum/project/CHIP-8",
+  "arguments": [
+   "emcc",
+   "-Wall",
+   "-Wextra",
+   "-g",
+   "clear.c",
+   "-o",
+   "clear.html"
+  ],
+  "file": "clear.c"
+ }
+]

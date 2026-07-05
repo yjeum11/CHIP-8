@@ -1,46 +1,25 @@
-#include <curses.h>
-#include <locale.h>
 #include <stdint.h>
 #include <time.h>
 
-
-
 void init_screen() {
-    setlocale(LC_ALL, "");
-    initscr();
-    cbreak();
-    noecho();
-    nodelay(stdscr, TRUE);
 }
 
 void clear_screen() {
-    clear();
 }
 
 void update_graphics(uint8_t *screen) {
     for (int i = 0; i < 32; i++) {
         for (int j = 0; j < 64; j++) {
             if (screen[i*64+j]) {
-                mvaddch(i, j, ACS_BLOCK);
             }
         }
     }
-    refresh();
-}
-
-void draw() {
-    refresh();
 }
 
 int16_t get_key() {
-    return getch();
 }
 
 int16_t get_key_block() {
-    nodelay(stdscr, FALSE);
-    int ch = getch();
-    nodelay(stdscr, TRUE);
-    return ch;
 }
 
 uint8_t keyboard_to_chip8(uint8_t key) {
@@ -81,7 +60,6 @@ uint8_t keyboard_to_chip8(uint8_t key) {
 }
 
 void uninit_screen() {
-    endwin();
 }
 
 uint8_t draw_sprite(uint8_t *screen, uint8_t *sprite, uint8_t x, uint8_t y) {
