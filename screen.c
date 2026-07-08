@@ -31,7 +31,8 @@ int init_screen() {
         SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
         return -1;
     }
-    // SDL_SetRenderLogicalPresentation(renderer, width, height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+    SDL_SetRenderVSync(renderer, 1);
+    SDL_SetRenderLogicalPresentation(renderer, width, height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
     return 0;
 }
 
@@ -83,43 +84,6 @@ void get_keys(u8 *keys) {
     keys[0xB] = sdl_keys[SDL_SCANCODE_C] ? 1 : 0;
     keys[0xF] = sdl_keys[SDL_SCANCODE_V] ? 1 : 0;
     keys[16] = sdl_keys[SDL_SCANCODE_ESCAPE] ? 1 : 0;
-}
-
-uint8_t keyboard_to_chip8(uint8_t key) {
-    switch (key) {
-        case '1':
-        case '2':
-        case '3':
-            return key - '1' + 1;
-        case '4':
-            return 0xC;
-        case 'q':
-            return 4;
-        case 'w':
-            return 5;
-        case 'e':
-            return 6;
-        case 'r':
-            return 0xD;
-        case 'a':
-            return 7;
-        case 's':
-            return 8;
-        case 'd':
-            return 9;
-        case 'f':
-            return 0xE;
-        case 'z':
-            return 0xA;
-        case 'x':
-            return 0;
-        case 'c':
-            return 0xC;
-        case 'v':
-            return 0xF;
-        default:
-            return key;
-    }
 }
 
 void uninit_screen() {

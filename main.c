@@ -43,6 +43,70 @@ typedef struct Chip8 {
     u8 display[64 * 32];
 } Chip8;
 
+typedef struct {
+    u8 redraw;
+    u8 waiting;
+} Chip8_Flags;
+
+Chip8 *chip8_init();
+int chip8_load(Chip8 *chip8, char *path);
+Chip8_Flags chip8_execute(Chip8 *chip8, u8 *keys);
+
+static Chip8 *chip8;
+static u32 timestamp;
+static u8 keys[17];
+
+SDL_AppResult SDL_AppInit (void **appstate, int argc, char *argv[]) {
+    // if (argc < 2) {
+    //     fprintf(stderr, "Usage: c8 <rom>");
+    //     exit(1);
+    // }
+
+    chip8 = chip8_init();
+    if (-1 == chip8_load(chip8, "./tests/bin/6-keypad.ch8")) {
+        return -1;
+    }
+
+    if (-1 == init_screen()) {
+        return SDL_APP_FAILURE;
+    }
+    clear_screen();
+    timestamp = millis();
+    return SDL_APP_CONTINUE;
+}
+
+SDL_AppResult SDL_AppIterate (void *appstate) {
+    Chip8_Flags flags;
+    for (int i = 0; i < INST_PER_FRAME; ++i) {
+        Chip8_Flags i_flags = chip8_execute(chip8, keys);
+        flags.redraw |= i_flags.redraw;
+    }
+    if (millis() - timestamp >= (1000/60)) {
+        timestamp = millis();
+        if (chip8->DT > 0)
+            chip8->DT--;
+        if (chip8->ST > 0)
+            chip8->ST--;
+    }
+    if (flags.redraw)
+        update_graphics(chip8->display);
+    return SDL_APP_CONTINUE;
+}
+
+SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
+    if (event->type == SDL_EVENT_QUIT) {
+        return SDL_APP_SUCCESS;
+    }
+    get_keys(keys);
+    if (keys[16]) {
+        return SDL_APP_SUCCESS;
+    }
+    return SDL_APP_CONTINUE;
+}
+
+void SDL_AppQuit(void *appstate, SDL_AppResult result) {
+    free(chip8);
+}
 
 // Returns new chip8 state object. Caller owns object
 Chip8 *chip8_init() {
@@ -62,11 +126,6 @@ int chip8_load(Chip8 *chip8, char *path) {
     fclose(prog_f);
     return 0;
 }
-
-typedef struct {
-    u8 redraw;
-    u8 waiting;
-} Chip8_Flags;
 
 Chip8_Flags chip8_execute(Chip8 *chip8, u8 *keys) {
     Chip8_Flags flags = {0};
@@ -176,11 +235,11 @@ Chip8_Flags chip8_execute(Chip8 *chip8, u8 *keys) {
             chip8->pc = nnn + chip8->V[0];
             incr_pc = 0;
             break;
-        case 0xC:
-            ;
+        case 0xC: {
             u8 randint = rand();
             chip8->V[x] = randint & kk;
             break;
+        }
         case 0xD: {
                       u8 sprite[15] = {0};
                       for (int i = 0; i < n; ++i) {
@@ -253,57 +312,4 @@ Chip8_Flags chip8_execute(Chip8 *chip8, u8 *keys) {
     if (incr_pc)
         chip8->pc += 2;
     return flags;
-}
-
-static Chip8 *chip8;
-static u32 timestamp;
-
-SDL_AppResult SDL_AppInit (void **appstate, int argc, char *argv[]) {
-    // if (argc < 2) {
-    //     fprintf(stderr, "Usage: c8 <rom>");
-    //     exit(1);
-    // }
-
-    chip8 = chip8_init();
-    if (-1 == chip8_load(chip8, "./tests/bin/6-keypad.ch8")) {
-        return -1;
-    }
-
-    if (-1 == init_screen()) {
-        return SDL_APP_FAILURE;
-    }
-    clear_screen();
-    timestamp = millis();
-    return SDL_APP_CONTINUE;
-}
-// get input
-static u8 keys[17];
-
-SDL_AppResult SDL_AppIterate (void *appstate) {
-    Chip8_Flags flags = chip8_execute(chip8, keys);
-    if (millis() - timestamp >= (1000/60)) {
-        timestamp = millis();
-        if (chip8->DT > 0)
-            chip8->DT--;
-        if (chip8->ST > 0)
-            chip8->ST--;
-    }
-    if (flags.redraw)
-        update_graphics(chip8->display);
-    return SDL_APP_CONTINUE;
-}
-
-SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
-    if (event->type == SDL_EVENT_QUIT) {
-        return SDL_APP_SUCCESS;
-    }
-    get_keys(keys);
-    if (keys[16]) {
-        return SDL_APP_SUCCESS;
-    }
-    return SDL_APP_CONTINUE;
-}
-
-void SDL_AppQuit(void *appstate, SDL_AppResult result) {
-    free(chip8);
 }
