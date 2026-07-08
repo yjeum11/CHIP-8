@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <time.h>
+
+#define SDL_MAIN_USE_CALLBACKS 1
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
 
 #include "util.h"
 #include "isa.h"
@@ -33,12 +36,13 @@ typedef struct Chip8 {
     u8 ST;
 
     u8 memory[MEM_SIZE];
-    u8 stack[STACK_SIZE];
+    u16 stack[STACK_SIZE];
     u8 sp;
     u16 pc;
 
     u8 display[64 * 32];
 } Chip8;
+
 
 // Returns new chip8 state object. Caller owns object
 Chip8 *chip8_init() {
@@ -59,7 +63,13 @@ int chip8_load(Chip8 *chip8, char *path) {
     return 0;
 }
 
-void chip8_execute(Chip8 *chip8) {
+typedef struct {
+    u8 redraw;
+    u8 waiting;
+} Chip8_Flags;
+
+Chip8_Flags chip8_execute(Chip8 *chip8, u8 *keys) {
+    Chip8_Flags flags = {0};
     u8 incr_pc = 1;
     u16 inst = chip8->memory[chip8->pc] << 8 | chip8->memory[chip8->pc+1];
     u16 nnn = inst & 0x0FFF;
@@ -72,10 +82,12 @@ void chip8_execute(Chip8 *chip8) {
         case 0:
             switch (inst) {
                 case CLS:
-                    clear_screen();
+                    memset(chip8->display, 0, sizeof(chip8->display));
+                    flags.redraw = 1;
                     break;
                 case RET:
-                    chip8->pc = chip8->stack[--chip8->sp];
+                    chip8->sp--;
+                    chip8->pc = chip8->stack[chip8->sp];
                     incr_pc = 0;
                     break;
             }
@@ -85,7 +97,8 @@ void chip8_execute(Chip8 *chip8) {
             incr_pc = 0;
             break;
         case 2: // Call subroutine nnn
-            chip8->stack[chip8->sp++] = chip8->pc+2;
+            chip8->stack[chip8->sp] = chip8->pc+2;
+            chip8->sp++;
             chip8->pc = nnn;
             incr_pc = 0;
             break;
@@ -174,17 +187,16 @@ void chip8_execute(Chip8 *chip8) {
                           sprite[i] = chip8->memory[chip8->I+i];
                       }
                       chip8->V[0xF] = draw_sprite(chip8->display, sprite, chip8->V[x], chip8->V[y]);
+                      flags.redraw = 1;
                       break;
                   }
         case 0xE: {
-                      i16 key = get_key();
-                      u8 c8key = keyboard_to_chip8(key);
                       if (kk == 0x9E) {
-                          if (chip8->V[x] == keyboard_to_chip8(key)) {
+                          if (keys[chip8->V[x]]) {
                               chip8->pc += 2;
                           }
                       } else if (kk == 0xA1) {
-                          if (chip8->V[x] != keyboard_to_chip8(key)) {
+                          if (!keys[chip8->V[x]]) {
                               chip8->pc += 2;
                           }
                       }
@@ -196,7 +208,6 @@ void chip8_execute(Chip8 *chip8) {
                               chip8->V[x] = chip8->DT;
                               break;
                           case 0x0A:
-                              chip8->V[x] = keyboard_to_chip8(get_key_block());
                               break;
                           case 0x15:
                               chip8->DT = chip8->V[x];
@@ -241,43 +252,58 @@ void chip8_execute(Chip8 *chip8) {
     }
     if (incr_pc)
         chip8->pc += 2;
+    return flags;
 }
 
-int main (int argc, char *argv[]) {
-    if (argc < 2) {
-        fprintf(stderr, "Usage: c8 <rom>");
-        exit(1);
-    }
+static Chip8 *chip8;
+static u32 timestamp;
 
-    Chip8 *chip8 = chip8_init();
-    if (-1 == chip8_load(chip8, argv[1])) {
+SDL_AppResult SDL_AppInit (void **appstate, int argc, char *argv[]) {
+    // if (argc < 2) {
+    //     fprintf(stderr, "Usage: c8 <rom>");
+    //     exit(1);
+    // }
+
+    chip8 = chip8_init();
+    if (-1 == chip8_load(chip8, "./tests/bin/6-keypad.ch8")) {
         return -1;
     }
 
-    init_screen();
-
-    struct timespec ts;
-
-    u32 timestamp = millis(&ts);
-    i32 *inputs = malloc(sizeof(i32) * 6);
-    for (;;) {
-        // get input
-        get_input(inputs);
-        chip8_execute(chip8, inputs);
-        if (millis(&ts) - timestamp >= (1000/60)) {
-            timestamp = millis(&ts);
-            if (chip8->DT > 0)
-                chip8->DT--;
-            if (chip8->ST > 0)
-                chip8->ST--;
-        }
-        update_graphics(chip8->display);
-        if (get_key() == 'p') {
-            uninit_screen();
-            exit(0);
-        }
+    if (-1 == init_screen()) {
+        return SDL_APP_FAILURE;
     }
+    clear_screen();
+    timestamp = millis();
+    return SDL_APP_CONTINUE;
+}
+// get input
+static u8 keys[17];
 
+SDL_AppResult SDL_AppIterate (void *appstate) {
+    Chip8_Flags flags = chip8_execute(chip8, keys);
+    if (millis() - timestamp >= (1000/60)) {
+        timestamp = millis();
+        if (chip8->DT > 0)
+            chip8->DT--;
+        if (chip8->ST > 0)
+            chip8->ST--;
+    }
+    if (flags.redraw)
+        update_graphics(chip8->display);
+    return SDL_APP_CONTINUE;
 }
 
+SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
+    if (event->type == SDL_EVENT_QUIT) {
+        return SDL_APP_SUCCESS;
+    }
+    get_keys(keys);
+    if (keys[16]) {
+        return SDL_APP_SUCCESS;
+    }
+    return SDL_APP_CONTINUE;
+}
 
+void SDL_AppQuit(void *appstate, SDL_AppResult result) {
+    free(chip8);
+}

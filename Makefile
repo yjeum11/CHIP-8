@@ -1,8 +1,10 @@
+SRC=main.c screen.c
+
 chip8: main.c isa.h screen.c screen.h
-	gcc -Wall -Wextra -Wpedantic -g -lncurses main.c screen.c -o chip8
+	gcc -Wall -Wextra -Wpedantic -g -lncurses $(SRC) -o chip8
 
 html: 
-	emcc -Wall -Wextra -g -sUSE_SDL=3 clear.c -o clear.html
+	emcc -Wall -Wextra -sUSE_SDL=3 --embed-file . $(SRC) -o chip8.html
 
 gdb: chip8
 	gdb -x cmds.gdb --tui ./chip8
