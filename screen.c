@@ -20,14 +20,14 @@ const static u32 width = gamepixel_w * 64;
 const static u32 height = gamepixel_h * 32;
 
 int init_screen() {
-    SDL_SetAppMetadata("Example Renderer Clear", "1.0", "com.example.renderer-clear");
+    SDL_SetAppMetadata("CHIP-8", "1.0", "com.yjeum.chip8");
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         SDL_Log("Couldn't initialize SDL: %s", SDL_GetError());
         return -1;
     }
 
-    if (!SDL_CreateWindowAndRenderer("examples/renderer/clear", width, height, 0, &window, &renderer)) {
+    if (!SDL_CreateWindowAndRenderer("CHIP-8", width, height, 0, &window, &renderer)) {
         SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
         return -1;
     }
@@ -84,6 +84,26 @@ void get_keys(u8 *keys) {
     keys[0xB] = sdl_keys[SDL_SCANCODE_C] ? 1 : 0;
     keys[0xF] = sdl_keys[SDL_SCANCODE_V] ? 1 : 0;
     keys[16] = sdl_keys[SDL_SCANCODE_ESCAPE] ? 1 : 0;
+}
+
+int scancode_to_chip8(SDL_Scancode scancode) {
+    if (scancode == SDL_SCANCODE_1) return 1;
+    if (scancode == SDL_SCANCODE_2) return 2;
+    if (scancode == SDL_SCANCODE_3) return 3;
+    if (scancode == SDL_SCANCODE_4) return 0xC;
+    if (scancode == SDL_SCANCODE_Q) return 4;
+    if (scancode == SDL_SCANCODE_W) return 5;
+    if (scancode == SDL_SCANCODE_E) return 6;
+    if (scancode == SDL_SCANCODE_R) return 0xD;
+    if (scancode == SDL_SCANCODE_A) return 7;
+    if (scancode == SDL_SCANCODE_S) return 8;
+    if (scancode == SDL_SCANCODE_D) return 9;
+    if (scancode == SDL_SCANCODE_F) return 0xE;
+    if (scancode == SDL_SCANCODE_Z) return 0xA;
+    if (scancode == SDL_SCANCODE_X) return 0;
+    if (scancode == SDL_SCANCODE_C) return 0xB;
+    if (scancode == SDL_SCANCODE_V) return 0xF;
+    return -1;
 }
 
 void uninit_screen() {

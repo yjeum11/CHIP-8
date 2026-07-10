@@ -55,6 +55,8 @@ Chip8_Flags chip8_execute(Chip8 *chip8, u8 *keys);
 static Chip8 *chip8;
 static u32 timestamp;
 static u8 keys[17];
+static u8 waiting;
+static u8 waiting_key;
 
 SDL_AppResult SDL_AppInit (void **appstate, int argc, char *argv[]) {
     // if (argc < 2) {
@@ -63,7 +65,7 @@ SDL_AppResult SDL_AppInit (void **appstate, int argc, char *argv[]) {
     // }
 
     chip8 = chip8_init();
-    if (-1 == chip8_load(chip8, "./tests/bin/6-keypad.ch8")) {
+    if (-1 == chip8_load(chip8, "./RPS.ch8")) {
         return -1;
     }
 
@@ -80,6 +82,11 @@ SDL_AppResult SDL_AppIterate (void *appstate) {
     for (int i = 0; i < INST_PER_FRAME; ++i) {
         Chip8_Flags i_flags = chip8_execute(chip8, keys);
         flags.redraw |= i_flags.redraw;
+        flags.waiting |= i_flags.waiting;
+        if (i_flags.waiting) {
+            waiting = 1;
+            break;
+        }
     }
     if (millis() - timestamp >= (1000/60)) {
         timestamp = millis();
@@ -96,6 +103,13 @@ SDL_AppResult SDL_AppIterate (void *appstate) {
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
     if (event->type == SDL_EVENT_QUIT) {
         return SDL_APP_SUCCESS;
+    }
+    if (event->type == SDL_EVENT_KEY_UP) {
+        int key_released = scancode_to_chip8(event->key.scancode);
+        if (key_released != -1) {
+            waiting = 0;
+            waiting_key = key_released;
+        }
     }
     get_keys(keys);
     if (keys[16]) {
@@ -128,6 +142,9 @@ int chip8_load(Chip8 *chip8, char *path) {
 }
 
 Chip8_Flags chip8_execute(Chip8 *chip8, u8 *keys) {
+    if (waiting) {
+        return (Chip8_Flags){0};
+    }
     Chip8_Flags flags = {0};
     u8 incr_pc = 1;
     u16 inst = chip8->memory[chip8->pc] << 8 | chip8->memory[chip8->pc+1];
@@ -267,6 +284,10 @@ Chip8_Flags chip8_execute(Chip8 *chip8, u8 *keys) {
                               chip8->V[x] = chip8->DT;
                               break;
                           case 0x0A:
+                              flags.waiting = 1;
+                              if (!waiting) {
+                                  chip8->V[x] = waiting_key;
+                              }
                               break;
                           case 0x15:
                               chip8->DT = chip8->V[x];
