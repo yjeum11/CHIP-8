@@ -4,7 +4,7 @@
 #include "util.h"
 #include <SDL3/SDL_scancode.h>
 
-#define INST_PER_FRAME 100
+#define INST_PER_FRAME 20
 
 int init_screen();
 void uninit_screen();

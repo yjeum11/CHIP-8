@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <emscripten.h>
 
 #define SDL_MAIN_USE_CALLBACKS 1
 #include <SDL3/SDL.h>
@@ -56,7 +57,13 @@ static Chip8 *chip8;
 static u32 timestamp;
 static u8 keys[17];
 static u8 waiting;
-static u8 waiting_key;
+static i32 waiting_key = -1;
+
+#define QUIRK_VF_RESET 0x1
+#define QUIRK_MEMORY 0x2
+#define QUIRK_SHIFTING 0x4
+
+static const u32 quirks = QUIRK_VF_RESET | QUIRK_MEMORY | QUIRK_SHIFTING;
 
 SDL_AppResult SDL_AppInit (void **appstate, int argc, char *argv[]) {
     // if (argc < 2) {
@@ -65,7 +72,7 @@ SDL_AppResult SDL_AppInit (void **appstate, int argc, char *argv[]) {
     // }
 
     chip8 = chip8_init();
-    if (-1 == chip8_load(chip8, "./RPS.ch8")) {
+    if (-1 == chip8_load(chip8, "./roms/RPS.ch8")) {
         return -1;
     }
 
@@ -82,9 +89,7 @@ SDL_AppResult SDL_AppIterate (void *appstate) {
     for (int i = 0; i < INST_PER_FRAME; ++i) {
         Chip8_Flags i_flags = chip8_execute(chip8, keys);
         flags.redraw |= i_flags.redraw;
-        flags.waiting |= i_flags.waiting;
-        if (i_flags.waiting) {
-            waiting = 1;
+        if (waiting) {
             break;
         }
     }
@@ -104,7 +109,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
     if (event->type == SDL_EVENT_QUIT) {
         return SDL_APP_SUCCESS;
     }
-    if (event->type == SDL_EVENT_KEY_UP) {
+    if (event->type == SDL_EVENT_KEY_UP && waiting) {
         int key_released = scancode_to_chip8(event->key.scancode);
         if (key_released != -1) {
             waiting = 0;
@@ -127,6 +132,7 @@ Chip8 *chip8_init() {
     Chip8 *new = malloc(sizeof(Chip8));
     memset(new, 0, sizeof(Chip8));
     memcpy(new->memory, fonts, sizeof(fonts));
+    new->pc = 0x200;
     return new;
 }
 
@@ -140,6 +146,25 @@ int chip8_load(Chip8 *chip8, char *path) {
     fclose(prog_f);
     return 0;
 }
+
+void chip8_reset_load(const char *path) {
+    memset(chip8, 0, sizeof(Chip8));
+    memcpy(chip8->memory, fonts, sizeof(fonts));
+    chip8_load(chip8, path);
+    chip8->pc = 0x200;
+    waiting = 0;
+    waiting_key = -1;
+}
+
+// Define a C function that calls JS to read the input
+EM_JS(void, get_input_from_box, (), {
+    // Read the value from the HTML input box with ID 'my-input'
+    var inputVal = document.getElementById('my-input').value;
+    
+    // Call a C++ function to handle this string (e.g., 'receiveString')
+    // We pass the string and handle memory allocation safely
+    Module.ccall('chip8_reset_load', null, ['string'], [inputVal]);
+});
 
 Chip8_Flags chip8_execute(Chip8 *chip8, u8 *keys) {
     if (waiting) {
@@ -203,12 +228,21 @@ Chip8_Flags chip8_execute(Chip8 *chip8, u8 *keys) {
                     break;
                 case 1:
                     chip8->V[x] |= chip8->V[y];
+                    if (quirks & QUIRK_VF_RESET) {
+                        chip8->V[0xF] = 0;
+                    }
                     break;
                 case 2:
                     chip8->V[x] &= chip8->V[y];
+                    if (quirks & QUIRK_VF_RESET) {
+                        chip8->V[0xF] = 0;
+                    }
                     break;
                 case 3:
                     chip8->V[x] ^= chip8->V[y];
+                    if (quirks & QUIRK_VF_RESET) {
+                        chip8->V[0xF] = 0;
+                    }
                     break;
                 case 4:
                     ;
@@ -217,22 +251,30 @@ Chip8_Flags chip8_execute(Chip8 *chip8, u8 *keys) {
                     chip8->V[0xF] = carry;
                     break;
                 case 5: {
-                            u8 flag = chip8->V[x] >= chip8->V[y];
+                            u8 flag = chip8->V[x] <= chip8->V[y];
                             chip8->V[x] = chip8->V[x] - chip8->V[y];
                             chip8->V[0xF] = flag;
                             break;
                         }
                 case 6: {
+                            if (quirks & QUIRK_SHIFTING) {
+                                chip8->V[x] = chip8->V[y];
+                            }
                             u8 flag = chip8->V[x] & (0x01);
                             chip8->V[x] >>= 1;
                             chip8->V[0xF] = flag;
                             break;
                         }
                 case 7:
+                        ;
+                        u8 notborrow = chip8->V[y] >= chip8->V[x];
                         chip8->V[x] = chip8->V[y] - chip8->V[x];
-                        chip8->V[0xF] = chip8->V[x] < chip8->V[y];
+                        chip8->V[0xF] = notborrow;
                         break;
                 case 0xE: {
+                              if (quirks & QUIRK_SHIFTING) {
+                                  chip8->V[x] = chip8->V[y];
+                              }
                               u8 flag = !!(chip8->V[x] & 0x80); // trick to detect one in MSB
                               chip8->V[x] <<= 1;
                               chip8->V[0xF] = flag;
@@ -284,9 +326,16 @@ Chip8_Flags chip8_execute(Chip8 *chip8, u8 *keys) {
                               chip8->V[x] = chip8->DT;
                               break;
                           case 0x0A:
-                              flags.waiting = 1;
+                              if (waiting_key == -1) {
+                                  waiting = 1;
+                                  incr_pc = 0;
+                                  break;
+                              }
                               if (!waiting) {
                                   chip8->V[x] = waiting_key;
+                                  waiting_key = -1;
+                                  incr_pc = 1;
+                                  break;
                               }
                               break;
                           case 0x15:
@@ -315,10 +364,16 @@ Chip8_Flags chip8_execute(Chip8 *chip8, u8 *keys) {
                                      for (int i = 0; i <= x; ++i) {
                                          chip8->memory[chip8->I+i] = chip8->V[i];
                                      }
+                                     if (quirks & QUIRK_MEMORY) {
+                                        chip8->I += x+1;
+                                     }
                                      break;
                           case 0x65:
                                      for (int i = 0; i <= x; ++i) {
                                          chip8->V[i] = chip8->memory[chip8->I+i];
+                                     }
+                                     if (quirks & QUIRK_MEMORY) {
+                                        chip8->I += x+1;
                                      }
                                      break;
                       }
