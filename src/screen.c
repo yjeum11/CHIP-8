@@ -28,7 +28,7 @@ const static u32 height = gamepixel_h * 32;
 const static SDL_AudioSpec spec = {
     .format = SDL_AUDIO_F32LE,
     .channels = 1,
-    .freq = 40100,
+    .freq = 44100,
 };
 
 int init_screen() {
@@ -51,7 +51,7 @@ int init_screen() {
 
     SDL_ResumeAudioStreamDevice(audiostream);
 
-    SDL_SetRenderVSync(renderer, 1);
+
     SDL_SetRenderLogicalPresentation(renderer, width, height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
     return 0;
 }
@@ -146,11 +146,13 @@ uint8_t draw_sprite(uint8_t *screen, uint8_t *sprite, uint8_t x, uint8_t y) {
 
 void play_tone() {
     const float tone_freq = 440;
-    SDL_ResumeAudioStreamDevice(audiostream);
-    if (SDL_GetAudioStreamQueued(audiostream) < 512 * sizeof(float)) {
-        float samples[512];
-        for (int i = 0; i < SDL_arraysize(samples); i++) {
-            samples[i] = SDL_sinf(sample_num * tone_freq / 8000.0f);
+    if (SDL_AudioStreamDevicePaused(audiostream)) {
+        SDL_ResumeAudioStreamDevice(audiostream);
+    }
+    if (SDL_GetAudioStreamQueued(audiostream) < 4096 * sizeof(float)) {
+        float samples[4096];
+        for (u32 i = 0; i < SDL_arraysize(samples); i++) {
+            samples[i] = 0.2 * SDL_sinf(sample_num * (tone_freq / 44100.f) * 2.0f * SDL_PI_F);
             sample_num++;
         }
         sample_num %= 44100;
@@ -160,7 +162,9 @@ void play_tone() {
 }
 
 void pause_tone() {
-    SDL_PauseAudioStreamDevice(audiostream);
+    if (!SDL_AudioStreamDevicePaused(audiostream)) {
+        SDL_PauseAudioStreamDevice(audiostream);
+    }
 }
 
 u32 millis() {

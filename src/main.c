@@ -72,7 +72,7 @@ SDL_AppResult SDL_AppInit (void **appstate, int argc, char *argv[]) {
     // }
 
     chip8 = chip8_init();
-    if (-1 == chip8_load(chip8, "./roms/buzz.ch8")) {
+    if (-1 == chip8_load(chip8, "./roms/down8.ch8")) {
         return -1;
     }
 
@@ -105,11 +105,11 @@ SDL_AppResult SDL_AppIterate (void *appstate) {
             chip8->ST--;
     }
 
-    if (chip8->ST > 0) {
-        play_tone();
-    } else {
-        pause_tone();
-    }
+    // if (chip8->ST > 0) {
+    //     play_tone();
+    // } else {
+    //     pause_tone();
+    // }
 
     if (flags.redraw)
         update_graphics(chip8->display);
