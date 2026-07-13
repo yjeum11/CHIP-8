@@ -72,7 +72,7 @@ SDL_AppResult SDL_AppInit (void **appstate, int argc, char *argv[]) {
     // }
 
     chip8 = chip8_init();
-    if (-1 == chip8_load(chip8, "./roms/down8.ch8")) {
+    if (-1 == chip8_load(chip8, "./roms/buzz.ch8")) {
         return -1;
     }
 
