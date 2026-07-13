@@ -63,14 +63,9 @@ static i32 waiting_key = -1;
 #define QUIRK_MEMORY 0x2
 #define QUIRK_SHIFTING 0x4
 
-static const u32 quirks = QUIRK_VF_RESET | QUIRK_MEMORY | QUIRK_SHIFTING;
+static const u32 quirks = QUIRK_MEMORY;
 
 SDL_AppResult SDL_AppInit (void **appstate, int argc, char *argv[]) {
-    // if (argc < 2) {
-    //     fprintf(stderr, "Usage: c8 <rom>");
-    //     exit(1);
-    // }
-
     chip8 = chip8_init();
     if (-1 == chip8_load(chip8, "./roms/down8.ch8")) {
         return -1;
@@ -96,7 +91,6 @@ SDL_AppResult SDL_AppIterate (void *appstate) {
     }
 
     // process sound 
-
     if (millis() - timestamp >= (1000/60)) {
         timestamp = millis();
         if (chip8->DT > 0)
@@ -104,12 +98,11 @@ SDL_AppResult SDL_AppIterate (void *appstate) {
         if (chip8->ST > 0)
             chip8->ST--;
     }
-
-    // if (chip8->ST > 0) {
-    //     play_tone();
-    // } else {
-    //     pause_tone();
-    // }
+    if (chip8->ST > 0) {
+        play_tone();
+    } else {
+        pause_tone();
+    }
 
     if (flags.redraw)
         update_graphics(chip8->display);
@@ -243,7 +236,7 @@ Chip8_Flags chip8_execute(Chip8 *chip8, u8 *keys) {
                     chip8->V[0xF] = carry;
                     break;
                 case 5: {
-                            u8 flag = chip8->V[x] <= chip8->V[y];
+                            u8 flag = chip8->V[x] >= chip8->V[y];
                             chip8->V[x] = chip8->V[x] - chip8->V[y];
                             chip8->V[0xF] = flag;
                             break;
