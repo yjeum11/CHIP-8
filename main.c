@@ -72,13 +72,14 @@ SDL_AppResult SDL_AppInit (void **appstate, int argc, char *argv[]) {
     // }
 
     chip8 = chip8_init();
-    if (-1 == chip8_load(chip8, "./roms/RPS.ch8")) {
+    if (-1 == chip8_load(chip8, "./roms/down8.ch8")) {
         return -1;
     }
 
     if (-1 == init_screen()) {
         return SDL_APP_FAILURE;
     }
+
     clear_screen();
     timestamp = millis();
     return SDL_APP_CONTINUE;
@@ -93,6 +94,9 @@ SDL_AppResult SDL_AppIterate (void *appstate) {
             break;
         }
     }
+
+    // process sound 
+
     if (millis() - timestamp >= (1000/60)) {
         timestamp = millis();
         if (chip8->DT > 0)
@@ -100,6 +104,13 @@ SDL_AppResult SDL_AppIterate (void *appstate) {
         if (chip8->ST > 0)
             chip8->ST--;
     }
+
+    if (chip8->ST > 0) {
+        play_tone();
+    } else {
+        pause_tone();
+    }
+
     if (flags.redraw)
         update_graphics(chip8->display);
     return SDL_APP_CONTINUE;
@@ -146,25 +157,6 @@ int chip8_load(Chip8 *chip8, char *path) {
     fclose(prog_f);
     return 0;
 }
-
-void chip8_reset_load(const char *path) {
-    memset(chip8, 0, sizeof(Chip8));
-    memcpy(chip8->memory, fonts, sizeof(fonts));
-    chip8_load(chip8, path);
-    chip8->pc = 0x200;
-    waiting = 0;
-    waiting_key = -1;
-}
-
-// Define a C function that calls JS to read the input
-EM_JS(void, get_input_from_box, (), {
-    // Read the value from the HTML input box with ID 'my-input'
-    var inputVal = document.getElementById('my-input').value;
-    
-    // Call a C++ function to handle this string (e.g., 'receiveString')
-    // We pass the string and handle memory allocation safely
-    Module.ccall('chip8_reset_load', null, ['string'], [inputVal]);
-});
 
 Chip8_Flags chip8_execute(Chip8 *chip8, u8 *keys) {
     if (waiting) {

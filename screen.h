@@ -14,5 +14,7 @@ void get_keys(u8 *keys);
 uint8_t draw_sprite(u8 *screen, u8 *sprite, u8 x, u8 y);
 int scancode_to_chip8(SDL_Scancode scancode);
 uint32_t millis();
+void play_tone();
+void pause_tone();
 
 #endif

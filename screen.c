@@ -1,5 +1,9 @@
+#include <SDL3/SDL_audio.h>
+#include <SDL3/SDL_error.h>
 #include <SDL3/SDL_events.h>
+#include <SDL3/SDL_init.h>
 #include <SDL3/SDL_scancode.h>
+#include <SDL3/SDL_stdinc.h>
 #include <SDL3/SDL_timer.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -12,6 +16,8 @@
 
 static SDL_Window *window = NULL;
 static SDL_Renderer *renderer = NULL;
+static SDL_AudioStream *audiostream = NULL;
+static int sample_num = 0;
 
 const static u32 gamepixel_w = 10;
 const static u32 gamepixel_h = 10;
@@ -19,10 +25,16 @@ const static u32 gamepixel_h = 10;
 const static u32 width = gamepixel_w * 64;
 const static u32 height = gamepixel_h * 32;
 
+const static SDL_AudioSpec spec = {
+    .format = SDL_AUDIO_F32LE,
+    .channels = 1,
+    .freq = 40100,
+};
+
 int init_screen() {
     SDL_SetAppMetadata("CHIP-8", "1.0", "com.yjeum.chip8");
 
-    if (!SDL_Init(SDL_INIT_VIDEO)) {
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
         SDL_Log("Couldn't initialize SDL: %s", SDL_GetError());
         return -1;
     }
@@ -31,6 +43,14 @@ int init_screen() {
         SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
         return -1;
     }
+
+    audiostream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
+    if (audiostream == NULL) {
+        printf("Couldn't create audio device: %s", SDL_GetError());
+    }
+
+    SDL_ResumeAudioStreamDevice(audiostream);
+
     SDL_SetRenderVSync(renderer, 1);
     SDL_SetRenderLogicalPresentation(renderer, width, height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
     return 0;
@@ -122,6 +142,25 @@ uint8_t draw_sprite(uint8_t *screen, uint8_t *sprite, uint8_t x, uint8_t y) {
         }
     }
     return flipped;
+}
+
+void play_tone() {
+    const float tone_freq = 440;
+    SDL_ResumeAudioStreamDevice(audiostream);
+    if (SDL_GetAudioStreamQueued(audiostream) < 512 * sizeof(float)) {
+        float samples[512];
+        for (int i = 0; i < SDL_arraysize(samples); i++) {
+            samples[i] = SDL_sinf(sample_num * tone_freq / 8000.0f);
+            sample_num++;
+        }
+        sample_num %= 44100;
+
+        SDL_PutAudioStreamData(audiostream, samples, sizeof(samples));
+    }
+}
+
+void pause_tone() {
+    SDL_PauseAudioStreamDevice(audiostream);
 }
 
 u32 millis() {
