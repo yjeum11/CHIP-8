@@ -5,11 +5,12 @@
    "emcc",
    "-Wall",
    "-Wextra",
-   "-g",
-   "clear.c",
+   "-I./include/",
+   "src/main.c",
+   "src/screen.c",
    "-o",
-   "clear.html"
+   "chip8.html"
   ],
-  "file": "clear.c"
+  "file": "src/screen.c"
  }
 ]

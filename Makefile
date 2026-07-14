@@ -1,10 +1,9 @@
-SRC=src/*.c
+SRC=$(wildcard src/*.c)
 
-html: roms/buzz.ch8 src/main.c src/screen.c
+html: chip8.html
+
+chip8.html: $(SRC)
 	emcc -Wall -Wextra -sUSE_SDL=3 -I./include/ --embed-file ./roms/ $(SRC) -o chip8.html
-
-roms/buzz.ch8: roms/buzz.hex
-	xxd -r -p roms/buzz.hex > roms/buzz.ch8
 
 gdb: chip8
 	gdb -x cmds.gdb --tui ./chip8

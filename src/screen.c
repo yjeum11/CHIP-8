@@ -1,13 +1,5 @@
-#include <SDL3/SDL_audio.h>
-#include <SDL3/SDL_error.h>
-#include <SDL3/SDL_events.h>
-#include <SDL3/SDL_init.h>
-#include <SDL3/SDL_scancode.h>
-#include <SDL3/SDL_stdinc.h>
-#include <SDL3/SDL_timer.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <time.h>
 
 #include <SDL3/SDL.h>
 
@@ -50,8 +42,6 @@ int init_screen() {
     }
 
     SDL_ResumeAudioStreamDevice(audiostream);
-
-
     SDL_SetRenderLogicalPresentation(renderer, width, height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
     return 0;
 }
@@ -127,21 +117,6 @@ int scancode_to_chip8(SDL_Scancode scancode) {
 }
 
 void uninit_screen() {
-}
-
-uint8_t draw_sprite(uint8_t *screen, uint8_t *sprite, uint8_t x, uint8_t y) {
-    int flipped = 0;
-    for (int i = 0; i < 15; ++i) {
-        for (int j = 0; j < 8; ++j) {
-            uint8_t curr = (sprite[i] >> (7-j)) & 1;
-            int wrapi = (y + i) % 32;
-            int wrapj = (x + j) % 64;
-            if (screen[wrapi*64+wrapj] && curr)
-                flipped = 1;
-            screen[wrapi*64+wrapj] = (screen[wrapi*64+wrapj] ^ curr) & 1;
-        }
-    }
-    return flipped;
 }
 
 void play_tone() {
