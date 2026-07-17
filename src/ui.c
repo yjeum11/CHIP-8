@@ -15,11 +15,33 @@ static int text_width(mu_Font font, const char *str, int len) {
         len = strlen(str);
     return 8 * len;
 }
-
+static const mu_Style my_style = {
+  /* font | size | padding | spacing | indent */
+  NULL, { 68, 10 }, 5, 4, 24,
+  /* title_height | scrollbar_size | thumb_size */
+  24, 12, 8,
+  {
+    { 230, 230, 230, 255 }, /* MU_COLOR_TEXT */
+    { 25,  25,  25,  255 }, /* MU_COLOR_BORDER */
+    { 50,  50,  50,  255 }, /* MU_COLOR_WINDOWBG */
+    { 25,  25,  25,  255 }, /* MU_COLOR_TITLEBG */
+    { 240, 240, 240, 255 }, /* MU_COLOR_TITLETEXT */
+    { 0,   0,   0,   0   }, /* MU_COLOR_PANELBG */
+    { 75,  75,  75,  255 }, /* MU_COLOR_BUTTON */
+    { 95,  95,  95,  255 }, /* MU_COLOR_BUTTONHOVER */
+    { 115, 115, 115, 255 }, /* MU_COLOR_BUTTONFOCUS */
+    { 30,  30,  30,  255 }, /* MU_COLOR_BASE */
+    { 35,  35,  35,  255 }, /* MU_COLOR_BASEHOVER */
+    { 40,  40,  40,  255 }, /* MU_COLOR_BASEFOCUS */
+    { 43,  43,  43,  255 }, /* MU_COLOR_SCROLLBASE */
+    { 30,  30,  30,  255 }  /* MU_COLOR_SCROLLTHUMB */
+  }
+};
 void init_ui(mu_Context *ctx) {
     mu_init(ctx);
     ctx->text_height = text_height;
     ctx->text_width = text_width;
+    ctx->style = &my_style;
 }
 
 int handle_events_ui(mu_Context *ctx, SDL_Event *event) {
@@ -41,32 +63,22 @@ int handle_events_ui(mu_Context *ctx, SDL_Event *event) {
     return ret;
 }
 
-void test_window(mu_Context *ctx) {
-    if (mu_begin_window(ctx, "My Window", mu_rect(10, 10, 140, 86))) {
-        mu_layout_row(ctx, 2, (int[]) { 60, -1 }, 0);
-
-        mu_label(ctx, "First:");
-        if (mu_button(ctx, "Button1")) {
-            printf("Button1 pressed\n");
+void test_window(mu_Context *ctx, Chip8 *chip8, Chip8_State *state) {
+    if (mu_begin_window_ex(ctx, "start", mu_rect(5, 5, 30, 30), MU_OPT_NOFRAME | MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NORESIZE | MU_OPT_NOSCROLL)) {
+        mu_layout_row(ctx, 1, (int[]){30}, 30);
+        if (mu_button(ctx, " ")) {
+            chip8_reset(chip8);
+            chip8_state_reset(state);
+            chip8_load(chip8, "./roms/RPS.ch8");
+            printf("btn\n");
         }
-
-        mu_label(ctx, "Second:");
-        if (mu_button(ctx, "Button2")) {
-            mu_open_popup(ctx, "My Popup");
-        }
-
-        if (mu_begin_popup(ctx, "My Popup")) {
-            mu_label(ctx, "Hello world!");
-            mu_end_popup(ctx);
-        }
-
         mu_end_window(ctx);
     }
 }
 
-void process_ui_frame(mu_Context *ctx) {
+void process_ui_frame(mu_Context *ctx, Chip8 *chip8, Chip8_State *state) {
     mu_begin(ctx);
-    test_window(ctx);
+    test_window(ctx, chip8, state);
     mu_end(ctx);
 }
 

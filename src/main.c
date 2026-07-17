@@ -74,7 +74,7 @@ SDL_AppResult SDL_AppIterate (void *appstate) {
     if (state.redraw)
         update_graphics(chip8->display);
 
-    process_ui_frame(ctx);
+    process_ui_frame(ctx, chip8, &state);
     draw_ui(ctx);
 
     render_present();
@@ -96,13 +96,6 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
     }
     if (!ui_event && (event->type == SDL_EVENT_KEY_UP || event->type == SDL_EVENT_KEY_DOWN)){
         get_keys(keys);
-        if (keys[16]) {
-            chip8_reset(chip8);
-            chip8_state_reset(&state);
-            memset(keys, 0, sizeof(keys));
-            chip8_load(chip8, "./roms/RPS.ch8");
-            return SDL_APP_CONTINUE;
-        }
     }
     return SDL_APP_CONTINUE;
 }
