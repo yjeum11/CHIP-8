@@ -19,6 +19,12 @@ void chip8_reset(Chip8 *chip8) {
     chip8->pc = 0x200;
 }
 
+void chip8_state_reset(Chip8_State *state) {
+    state->redraw = 0;
+    state->waiting = 0;
+    state->waiting_key = -1;
+}
+
 int chip8_load(Chip8 *chip8, char *path) {
     FILE *prog_f = fopen(path, "rb");
     if (prog_f == NULL) {
@@ -34,7 +40,8 @@ Chip8_State chip8_execute(Chip8 *chip8, u8 *keys, Chip8_State state) {
     if (state.waiting) {
         return state;
     }
-    Chip8_State next_state = {0};
+    Chip8_State next_state;
+    chip8_state_reset(&next_state);
     u8 incr_pc = 1;
     u16 inst = chip8->memory[chip8->pc] << 8 | chip8->memory[chip8->pc+1];
     u16 nnn = inst & 0x0FFF;
@@ -194,8 +201,7 @@ Chip8_State chip8_execute(Chip8 *chip8, u8 *keys, Chip8_State state) {
                                   next_state.waiting = 1;
                                   incr_pc = 0;
                                   break;
-                              }
-                              if (!state.waiting) {
+                              } else if (!state.waiting) {
                                   chip8->V[x] = state.waiting_key;
                                   next_state.waiting_key = -1;
                                   incr_pc = 1;

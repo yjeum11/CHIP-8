@@ -50,6 +50,8 @@ typedef struct {
 static const u32 quirks = QUIRK_MEMORY;
 
 Chip8 *chip8_init();
+void chip8_reset(Chip8 *chip8);
+void chip8_state_reset(Chip8_State *state);
 int chip8_load(Chip8 *chip8, char *path);
 Chip8_State chip8_execute(Chip8 *chip8, u8 *keys, Chip8_State state);
 uint8_t draw_sprite(uint8_t *screen, uint8_t *sprite, uint8_t x, uint8_t y);

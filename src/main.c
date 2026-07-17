@@ -21,6 +21,9 @@ static mu_Context *ctx;
 
 SDL_AppResult SDL_AppInit (void **appstate, int argc, char *argv[]) {
     chip8 = chip8_init();
+    state.redraw = 0;
+    state.waiting = 0;
+    state.waiting_key = -1;
     if (-1 == chip8_load(chip8, "./roms/down8.ch8")) {
         return -1;
     }
@@ -29,10 +32,8 @@ SDL_AppResult SDL_AppInit (void **appstate, int argc, char *argv[]) {
         return SDL_APP_FAILURE;
     }
 
-    printf("mucontext is %d bytes\n", sizeof(mu_Context));
 
     ctx = malloc(sizeof(mu_Context));
-
     init_ui(ctx);
 
     clear_screen();
@@ -70,7 +71,7 @@ SDL_AppResult SDL_AppIterate (void *appstate) {
         pause_tone();
     }
 
-    // if (state.redraw)
+    if (state.redraw)
         update_graphics(chip8->display);
 
     process_ui_frame(ctx);
@@ -95,6 +96,13 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
     }
     if (!ui_event && (event->type == SDL_EVENT_KEY_UP || event->type == SDL_EVENT_KEY_DOWN)){
         get_keys(keys);
+        if (keys[16]) {
+            chip8_reset(chip8);
+            chip8_state_reset(&state);
+            memset(keys, 0, sizeof(keys));
+            chip8_load(chip8, "./roms/RPS.ch8");
+            return SDL_APP_CONTINUE;
+        }
     }
     return SDL_APP_CONTINUE;
 }

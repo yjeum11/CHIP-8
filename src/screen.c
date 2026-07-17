@@ -98,7 +98,7 @@ void get_keys(u8 *keys) {
     keys[0] = sdl_keys[SDL_SCANCODE_X] ? 1 : 0;
     keys[0xB] = sdl_keys[SDL_SCANCODE_C] ? 1 : 0;
     keys[0xF] = sdl_keys[SDL_SCANCODE_V] ? 1 : 0;
-    keys[16] = sdl_keys[SDL_SCANCODE_ESCAPE] ? 1 : 0;
+    keys[16] = sdl_keys[SDL_SCANCODE_P] ? 1 : 0;
 }
 
 int scancode_to_chip8(SDL_Scancode scancode) {
