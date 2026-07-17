@@ -1,8 +1,9 @@
 #ifndef SCREEN_H
 #define SCREEN_H
 
-#include "util.h"
 #include <SDL3/SDL_scancode.h>
+#include "microui.h"
+#include "util.h"
 
 #define INST_PER_FRAME 20
 
@@ -16,5 +17,7 @@ int scancode_to_chip8(SDL_Scancode scancode);
 uint32_t millis();
 void play_tone();
 void pause_tone();
+void draw_ui(mu_Context *ctx);
+void render_present();
 
 #endif

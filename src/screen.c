@@ -2,7 +2,9 @@
 #include <stdio.h>
 
 #include <SDL3/SDL.h>
+#include "microui.h"
 
+#include "ui.h"
 #include "util.h"
 #include "screen.h"
 
@@ -11,13 +13,13 @@ static SDL_Renderer *renderer = NULL;
 static SDL_AudioStream *audiostream = NULL;
 static int sample_num = 0;
 
-const static u32 gamepixel_w = 10;
-const static u32 gamepixel_h = 10;
+static const u32 gamepixel_w = 10;
+static const u32 gamepixel_h = 10;
 
-const static u32 width = gamepixel_w * 64;
-const static u32 height = gamepixel_h * 32;
+static const u32 width = gamepixel_w * 64;
+static const u32 height = gamepixel_h * 32;
 
-const static SDL_AudioSpec spec = {
+static const SDL_AudioSpec spec = {
     .format = SDL_AUDIO_F32LE,
     .channels = 1,
     .freq = 44100,
@@ -71,6 +73,9 @@ void update_graphics(uint8_t *screen) {
     SDL_RenderClear(renderer);
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderFillRects(renderer, render_rects, rect_idx);
+}
+
+void render_present() {
     SDL_RenderPresent(renderer);
 }
 
@@ -146,3 +151,6 @@ u32 millis() {
     return SDL_GetTicks();
 }
 
+void draw_ui(mu_Context *ctx) {
+    render_ui(ctx, renderer);
+}

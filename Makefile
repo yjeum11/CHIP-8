@@ -3,7 +3,10 @@ SRC=$(wildcard src/*.c)
 html: chip8.html
 
 chip8.html: $(SRC)
-	emcc -Wall -Wextra -sUSE_SDL=3 -I./include/ --embed-file ./roms/ $(SRC) -o chip8.html
+	emcc -Wall -Wextra -sUSE_SDL=3 -sALLOW_MEMORY_GROWTH -I./include/ --embed-file ./roms/ $(SRC) -o chip8.html
+
+chip8: $(SRC)
+	gcc -Wall -Wextra -I./include/ -lSDL3 $(SRC) -o chip8
 
 gdb: chip8
 	gdb -x cmds.gdb --tui ./chip8
